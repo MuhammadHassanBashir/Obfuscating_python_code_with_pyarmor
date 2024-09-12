@@ -66,3 +66,59 @@
     
     # Command to run the FastAPI application
     CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+## Obfuscating with pyarmon 7.7.4 verison
+
+        # Stage 1: Build the application (obfuscation and packaging)
+        FROM python:3.10-slim-buster AS obfuscator
+        
+        # Set environment variables
+        ENV PYTHONDONTWRITEBYTECODE 1
+        ENV PYTHONUNBUFFERED 1
+        
+        # Set the working directory
+        WORKDIR /app
+        
+        # Install git, binutils, and necessary tools for obfuscation and packaging
+        RUN apt-get update && apt-get install -y git
+        
+        # Copy all necessary files to the container
+        COPY . ./
+        
+        # Install PyArmor and PyInstaller, and dependencies from requirements.txt
+        RUN pip install pyarmor==7.7.4
+        RUN pip install --no-cache-dir -r requirements.txt
+        
+        # Obfuscate the entire application recursively, including all subdirectories
+        RUN pyarmor obfuscate -O obf main.py
+        RUN ls -la /app/obf
+        
+        # Stage 2: Create the final runtime image
+        FROM python:3.10-slim-buster AS runner
+        
+        # Install git (needed for git-based dependencies in requirements.txt)
+        RUN apt-get update && apt-get install -y git
+        
+        # Set environment variables
+        ENV PYTHONDONTWRITEBYTECODE 1
+        ENV PYTHONUNBUFFERED 1
+        
+        # Set the working directory
+        WORKDIR /app
+        
+        # Copy the obfuscated files from the build stage
+        COPY --from=obfuscator /app/obf/ ./
+        RUN ls -la /app
+        COPY --from=obfuscator /app/requirements.txt ./
+        
+        # Install dependencies inside the final image
+        RUN pip install --no-cache-dir -r requirements.txt
+        
+        # Debug step: Check the contents of the /app/ folder
+        RUN ls -la /app
+        
+        # Expose the application port
+        EXPOSE 8000
+        
+        # Command to run the FastAPI application
+        CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
