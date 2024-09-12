@@ -122,3 +122,63 @@
         
         # Command to run the FastAPI application
         CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+## with pyObfuscator module
+
+    # Stage 1: Build the application (obfuscation and packaging)
+    FROM python:3.11-slim-buster AS obfuscator
+        
+    # Set environment variables
+    ENV PYTHONDONTWRITEBYTECODE 1
+    ENV PYTHONUNBUFFERED 1
+        
+    # Set the working directory
+    WORKDIR /app
+        
+    # Install git, binutils, and necessary tools for obfuscation and packaging
+    RUN apt-get update && apt-get install -y git
+        
+    # Copy all necessary files to the container
+    COPY . ./
+    
+    # Step 5: Install PyObfuscator
+    RUN pip install PyObfuscator
+    RUN pip install --no-cache-dir -r requirements.txt
+    # Step 6: Obfuscate the Python script
+    RUN PyObfuscator main.py -o main_obf.py
+    RUN ls -la /app
+    
+    # Stage 2: Create the final runtime image
+    FROM python:3.11-slim-buster AS runner
+        
+    # Install git (needed for git-based dependencies in requirements.txt)
+    RUN apt-get update && apt-get install -y git
+        
+    # Set environment variables
+    ENV PYTHONDONTWRITEBYTECODE 1
+    ENV PYTHONUNBUFFERED 1
+        
+    # Set the working directory
+    WORKDIR /app
+        
+    # Copy the obfuscated files from the build stage
+    COPY --from=obfuscator /app/ ./
+    #RUN ls -la /app
+    COPY --from=obfuscator /app/requirements.txt ./
+        
+    # Install dependencies inside the final image
+    RUN pip install --no-cache-dir -r requirements.txt
+        
+    # Debug step: Check the contents of the /app/ folder
+    #RUN ls -la /app
+        
+    # Expose the application port
+    EXPOSE 8000
+        
+    # Command to run the FastAPI application
+    CMD ["uvicorn", "main_obf:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+###2nd
+
+
