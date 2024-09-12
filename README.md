@@ -223,4 +223,55 @@
         # Run the obfuscated Python script
         CMD ["uvicorn", "main_obf:app", "--host", "0.0.0.0", "--port", "8000"]
 
+# with Intensio Obfuscation tool
+
+        # Use python:3.11-slim as base image
+        FROM python:3.11-slim-buster
+        
+        # Set environment variables
+        ENV PYTHONDONTWRITEBYTECODE 1
+        ENV PYTHONUNBUFFERED 1
+        
+        # Set the working directory inside the container
+        WORKDIR /app
+        
+        # Copy the current directory (with the Python script) to the container
+        COPY . .
+        
+        # Install git and necessary packages
+        RUN apt-get update && apt-get install -y git
+        
+        # Install dependencies
+        RUN pip install --no-cache-dir -r requirements.txt
+        
+        # Create the input directory and move main.py into it
+        RUN mkdir -p input
+        RUN cp main.py input/main.py
+        
+        # Clone the Intensio-Obfuscator repository
+        # RUN git clone https://github.com/Hnfull/Intensio-Obfuscator.git
+        
+        # Install the obfuscator dependencies
+        # RUN pip install -r Intensio-Obfuscator/requirements.txt
+        
+        # Install Intensio-Obfuscator as a Python package
+        RUN pip install intensio-obfuscator
+        
+        # Obfuscate the script with the required argument
+        RUN intensio_obfuscator -i input -o obfuscated -mlen medium -rts -ps -rth -ind 4
+        
+        # Remove the input directory
+        RUN rm -rvf input
+        
+        # Verify the obfuscated file exists
+        RUN ls -l /app/obfuscated/
+        RUN cp /app/obfuscated/main.py /app/obfuscated/main_obf.py
+        # Move the obfuscated script to the root directory
+        RUN mv /app/obfuscated/main_obf.py /app/
+        
+        EXPOSE 8000
+        
+        # Run the obfuscated Python script
+        CMD ["uvicorn", "main_obf:app", "--host", "0.0.0.0", "--port", "8000"]
+
 
