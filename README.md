@@ -179,6 +179,48 @@
     CMD ["uvicorn", "main_obf:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
-###2nd
+### With pyminifier obfuscate
+
+        # Use python:3.11-slim as base image
+        FROM python:3.11-slim-buster
+        
+        # Set environment variables
+        ENV PYTHONDONTWRITEBYTECODE 1
+        ENV PYTHONUNBUFFERED 1
+        
+        # Set the working directory inside the container
+        WORKDIR /app
+        
+        # Copy the current directory (with the Python script) to the container
+        COPY . .
+        
+        # Install git and necessary packages
+        RUN apt-get update && apt-get install -y git
+        
+        # Install dependencies
+        RUN pip install --no-cache-dir -r requirements.txt
+        RUN pip3 install --upgrade pip setuptools==57.5.0
+        # Install Pyminifier
+        RUN pip install pyminifier
+        
+        # Create the input directory and move main.py into it
+        #RUN mkdir -p input
+        #RUN cp main.py input/main.py
+        
+        # Obfuscate the script using Pyminifier
+        RUN pyminifier --obfuscate --replacement-length=4 -o main_obf.py main.py
+        # Remove the input directory
+        #RUN rm -rvf input
+        
+        # Verify the obfuscated file exists
+        #RUN ls -l /app/obfuscated/
+        
+        # Move the obfuscated script to the root directory
+        #RUN mv /app/obfuscated/main_obf.py /app/
+        
+        EXPOSE 8000
+        
+        # Run the obfuscated Python script
+        CMD ["uvicorn", "main_obf:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
